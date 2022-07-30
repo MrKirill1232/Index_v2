@@ -6,6 +6,7 @@ import com.index.enums.RestrictionMediaType;
 import com.index.model.events.CallbackQueryManager;
 import com.index.model.forwarding.Forward;
 import com.index.model.holders.*;
+import com.index.sends.SendMessageMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.PhotoSize;
@@ -44,7 +45,8 @@ public class ChatModerationHandler {
     boolean skip_check;
     boolean isActual;
     boolean restricted;
-    private void setVariables(Update update){
+    private void setVariables(Update update)
+    {
         UpdateVariables uv = new UpdateVariables(update);
         if (uv.getMessage() == null)
         {
@@ -96,7 +98,7 @@ public class ChatModerationHandler {
         }
         updateTime = update.getMessage() == null ? (long) update.getCallbackQuery().getMessage().getDate() : (long) update.getMessage().getDate();
         isActual = isActual();
-        if (update.getCallbackQuery() != null && isActual)
+        if (update.getCallbackQuery() != null /* && isActual */)
         {
             new CallbackQueryManager(update);
             return;
@@ -107,11 +109,12 @@ public class ChatModerationHandler {
             new Forward("delete", false, update);
             return;
         }
-        if (updateChat.getChatID().equals(im.YummyChannel_CHAT) && im.RESEND)
+        if (((updateMessage == null || (!updateMessage.startsWith("!") && !updateMessage.startsWith("/") && !updateMessage.startsWith("//"))) && updateChat.getChatID().equals("-1001750517257"))
+        || (updateChat.getChatID().equals(im.YummyChannel_CHAT) && im.RESEND))
         {
             new Forward("Forwarding", isActual, update);
         }
-        if (updateChat.getChatID().equals(im.YummyReChat) && (
+        if ((updateChat.getChatID().equals(im.YummyReChat)) && (
                 updateMessage == null || (!updateMessage.startsWith("!") && !updateMessage.startsWith("/") && !updateMessage.startsWith("//"))))
         {
             new Forward("Translate", isActual, update);
@@ -121,7 +124,29 @@ public class ChatModerationHandler {
             deleteMessage();
             return;
         }
-        if ((updateMessage != null && updateMessage.startsWith("/") && !updateMessage.startsWith("//")) &&
+        if (updateMessage != null && (updateMessage.startsWith("/") || updateMessage.startsWith("//")))
+        {
+            String command = updateMessage.split(" ", 2)[0].toLowerCase();
+            Commands requestCommand = Commands.getCommandByString(command);
+            if (requestCommand != null)
+            {
+                if (requestCommand.getAccessLevel() == 0
+                || (requestCommand.getAccessLevel() == 1 && ((userModeration != null && userModeration.contains(updateUser.getUserID())) || updateChat.getAdminsList() != null && updateChat.getAdminsList().contains(updateUser.getUserID())))
+                || (requestCommand.getAccessLevel() == 2 && updateChat.getAdminsList() != null && updateChat.getAdminsList().contains(updateUser.getUserID())))
+                {
+                    try
+                    {
+                        requestCommand.makeCommand(update);
+                        return;
+                    }
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        /*if ((updateMessage != null && updateMessage.startsWith("/") && !updateMessage.startsWith("//")) &&
                 (
                         (userModeration != null && userModeration.contains(updateUser.getUserID())) || (ignoreUsers != null && ignoreUsers.contains(updateUser.getUserID()))
                 ))
@@ -133,7 +158,7 @@ public class ChatModerationHandler {
         {
             new AdminCommandHandler(update);
             return;
-        }
+        }*/
         if (updateUser.getNextMessageReset().getTimeInMillis() < currentTime)
         {
             resetFields();
@@ -151,6 +176,7 @@ public class ChatModerationHandler {
     private void CheckRestriction(Update update)
     {
         if (skip_check) return;
+        //if (updateChat.getChatID().equals("-1001591532086")) return;
         Calendar calendar = Calendar.getInstance();
         Message temp = update.getMessage();
         RestrictionMedia rMedia = updateChat.getRestrictionMedia();
@@ -183,11 +209,20 @@ public class ChatModerationHandler {
                 }
             }
         }
+        if (temp.hasDice())
+        {
+            deleteMessage();
+        }
         if (temp.hasAnimation())
         {
-            file_id = temp.getAnimation().getFileUniqueId();
-            if (rMedia.checkIsInRestrictionMedia(RestrictionMediaType.GIF, file_id))
+            String fileUniqueId = temp.getAnimation().getFileUniqueId();
+            String fileId = temp.getAnimation().getFileId();
+            if (rMedia.checkIsInRestrictionMedia(RestrictionMediaType.GIF, fileId) || rMedia.checkIsInRestrictionMedia(RestrictionMediaType.GIF, fileUniqueId))
             {
+                if (rMedia.checkIsInRestrictionMedia(RestrictionMediaType.GIF, fileUniqueId))
+                {
+                    rMedia.replaceID(RestrictionMediaType.GIF, fileUniqueId, fileId, updateChat.getChatID());
+                }
                 new Forward("DELETE", isActual, update);
                 deleteMessage();
                 if (!restricted)
@@ -219,9 +254,14 @@ public class ChatModerationHandler {
         }
         if (temp.hasVideo())
         {
-            file_id = temp.getVideo().getFileUniqueId();
-            if (rMedia.checkIsInRestrictionMedia(RestrictionMediaType.VIDEO, file_id))
+            String fileUniqueId = temp.getVideo().getFileUniqueId();
+            String fileId = temp.getVideo().getFileId();
+            if (rMedia.checkIsInRestrictionMedia(RestrictionMediaType.VIDEO, fileId) || rMedia.checkIsInRestrictionMedia(RestrictionMediaType.VIDEO, fileUniqueId))
             {
+                if (rMedia.checkIsInRestrictionMedia(RestrictionMediaType.VIDEO, fileUniqueId))
+                {
+                    rMedia.replaceID(RestrictionMediaType.VIDEO, fileUniqueId, fileId, updateChat.getChatID());
+                }
                 new Forward("DELETE", isActual, update);
                 deleteMessage();
                 if (!restricted)
@@ -234,6 +274,12 @@ public class ChatModerationHandler {
         }
         if (temp.hasSticker())
         {
+            if (temp.getSticker().getPremiumAnimation() != null)
+            {
+                new Forward("DELETE", isActual, update);
+                deleteMessage();
+                return;
+            }
             file_id = temp.getSticker().getSetName();
             if (rMedia.checkIsInRestrictionMedia(RestrictionMediaType.STICKER, file_id))
             {
@@ -248,8 +294,8 @@ public class ChatModerationHandler {
             else
             {
                 int sticker_available_count = updateChat.getMaxStickerCount();
-                int sticker_count = updateUser.getStickerCount();
-                if (!updateUser.getIgnoreStickerCheck() &&
+                int sticker_count = updateUser.getStickerCount() ;
+                if (!updateChat.getAgreedStickerList().isEmpty() && !updateUser.getIgnoreStickerCheck() &&
                         (file_id == null || !updateChat.getAgreedStickerList().contains(file_id)))
                 {
                     new Forward("DELETE", isActual, update);
@@ -303,9 +349,14 @@ public class ChatModerationHandler {
         }
         if (temp.hasPhoto())
         {
-            file_id = Objects.requireNonNull(temp.getPhoto().stream().max(Comparator.comparing(PhotoSize::getFileId)).orElse(null)).getFileUniqueId();
-            if (rMedia.checkIsInRestrictionMedia(RestrictionMediaType.PHOTO, file_id))
+            String fileUniqueId = Objects.requireNonNull(temp.getPhoto().stream().max(Comparator.comparing(PhotoSize::getFileId)).orElse(null)).getFileUniqueId();
+            String fileId = Objects.requireNonNull(temp.getPhoto().stream().max(Comparator.comparing(PhotoSize::getFileId)).orElse(null)).getFileId();
+            if (fileUniqueId != null && (rMedia.checkIsInRestrictionMedia(RestrictionMediaType.PHOTO, fileId) || rMedia.checkIsInRestrictionMedia(RestrictionMediaType.PHOTO, fileUniqueId)))
             {
+                if (rMedia.checkIsInRestrictionMedia(RestrictionMediaType.PHOTO, fileUniqueId))
+                {
+                    rMedia.replaceID(RestrictionMediaType.PHOTO, fileUniqueId, fileId, updateChat.getChatID());
+                }
                 new Forward("DELETE", isActual, update);
                 deleteMessage();
                 if (!restricted)
@@ -314,6 +365,16 @@ public class ChatModerationHandler {
                     callMute(calendar, "Фото файлы подозрительного характера - автоматическая блокировка;", true, update);
                     need_to_announce = true;
                 }
+            }
+        }
+        if (temp.getForwardFromChat() != null)
+        {
+            file_id = String.valueOf(temp.getForwardFromChat().getId());
+            if (file_id != null && rMedia.checkIsInRestrictionMedia(RestrictionMediaType.FORWARD, file_id))
+            {
+                new Forward("DELETE", isActual, update);
+                deleteMessage();
+                new SendMessageMethod(0, updateChat.getChatID(), "Я запрещаю Вам пересылать сообщения из этого чата.");
             }
         }
         if (temp.getNewChatMembers().stream().findFirst().isPresent())
@@ -334,7 +395,8 @@ public class ChatModerationHandler {
             org.telegram.telegrambots.meta.api.objects.InputFile file = new org.telegram.telegrambots.meta.api.objects.InputFile();
             //java.io.File photo_f = new File("photo_2022-02-06_17-23-09.jpg");
             //file.setMedia(photo_f);
-            file.setMedia("CgACAgIAAx0CVq806gABDn9tYpjQXn3pYSymA3-fjfXwdU1CB1IAAsgaAALytcFLZEp5v-Dau2EkBA");
+            int random = (int) Math.round(Math.random() * 100);
+            file.setMedia(random > 50 ? "CgACAgIAAx0CVq806gABDn9tYpjQXn3pYSymA3-fjfXwdU1CB1IAAsgaAALytcFLZEp5v-Dau2EkBA" : "CgACAgQAAxkBAAIPc2LR5oZhCMpy5j1QtqH8wiL6TuL7AAJXAwACZ7D9UIzXhwaqWVWAKQQ");
             SendAnimation animation = SendAnimation.builder()
                     .replyToMessageId(Integer.parseInt(messageID))
                     .animation(file)

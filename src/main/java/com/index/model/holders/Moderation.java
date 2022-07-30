@@ -2,8 +2,10 @@ package com.index.model.holders;
 
 import com.index.DataBaseConnection;
 import com.index.IndexMain;
+import com.index.data.sql.ReportTicketsInfo;
 import com.index.data.sql.UserInfo;
 import com.index.enums.RestrictionType;
+import com.index.model.forwarding.Forward;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.RestrictChatMember;
 import org.telegram.telegrambots.meta.api.objects.ChatPermissions;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -125,6 +127,7 @@ public class Moderation {
             return false;
         }
         user_id = !user_id.isEmpty() ? user_id : new StringBuilder(temp.getReplyToMessage().getSenderChat() == null ? String.valueOf(temp.getReplyToMessage().getFrom().getId()) : String.valueOf(temp.getReplyToMessage().getSenderChat().getId()));
+
         return callMute(chat_id, user_id.toString(), call_name, mute_name, comment.toString(), time, update, announceType);
     }
 
@@ -148,18 +151,27 @@ public class Moderation {
             mute.setUserId(Long.parseLong(userID));
             mute.setPermissions(new ChatPermissions(false, false, false, false, false, false, false, false));
             mute.setUntilDate(Math.toIntExact((long) time.getTimeInMillis() / 1000L));
-            try {
+            try
+            {
                 im.execute(mute);
                 if (announceType) im.SendAnswer(chatID, callName, banMessage, "null", replyMessage);
                 updateUser(chatID, userID, time);
                 updateDateBase(chatID, ifh.getUser(chatID, userID), comment, storeUpdate ? update : null);
                 return true;
-            } catch (TelegramApiException e) {
+            }
+            catch (TelegramApiException e)
+            {
                 im.SendAnswer(chatID, callName, errorMessage, "null", replyMessage);
                 return false;
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 im.SendAnswer(chatID, callName, "Интересная ошибка " + e, "null", replyMessage);
+            }
+            finally
+            {
+                ReportTicketsInfo.getInstance().addNewReport(update);
+                new Forward("Forwarding", true, update);
             }
         }
         updateUser(chatID, userID, time);

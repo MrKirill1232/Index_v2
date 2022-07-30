@@ -1,42 +1,99 @@
 package com.index;
 
 import com.index.chat.ChatModerationHandler;
+import com.index.chat.Commands;
 import com.index.model.future.AutoSaveManager;
+import com.index.sends.SendMessageMethod;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.polls.SendPoll;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import java.util.List;
 
 public class IndexMain extends TelegramLongPollingBot {
 
     //public String YummyChannel_CHAT = "-1001604709313";    // YummyChat вроде когда бота переписывал - резервного бота на тех чат переключил
     public String YummyChannel_CHAT = "-1001454322922";    // YummyChat
     public String YummyReChat = "-1001604709313";
-    public boolean RESEND = true;
+    public boolean RESEND = false;
     public boolean d_debug = false;
     @Override
     public void onUpdateReceived(Update update)
     {
-        if (d_debug &&
-                (update.getMessage() != null && update.getMessage().getFrom() != null && String.valueOf(update.getMessage().getFrom().getId()).equals("499220683")))
+        if (update == null)
         {
-            new ChatModerationHandler(update);
-            if (!AutoSaveManager.getInstance().sends)
+            return;
+        }
+
+        if (d_debug)
+        {
+            if (update.getMessage() != null && update.getMessage().getFrom() != null && (!String.valueOf(update.getMessage().getFrom().getId()).equals("499220683")))
             {
-                AutoSaveManager.getInstance().sends = true;
-                SendAnswer(YummyChannel_CHAT, "Index", "Бот запущен в режиме отладки. Сообщения обрабатываются только от пользователя @MrKirill1232.");
+                return;
+            }
+            if (update.getCallbackQuery() != null && update.getCallbackQuery().getFrom() != null && (!String.valueOf(update.getCallbackQuery().getFrom().getId()).equals("499220683")))
+            {
+                return;
             }
         }
-        else if (!d_debug)
+        if (false)
         {
-            if (!AutoSaveManager.getInstance().sends)
+            if (d_debug)
             {
-                AutoSaveManager.getInstance().sends = true;
-                SendAnswer(YummyChannel_CHAT, "Index", "Бот запущен в обычном режиме.");
+                SendAnswer(YummyChannel_CHAT, "Index", "Бот запущен в режиме отладки. Сообщения обрабатываются только от некоторых пользователей.");
             }
-            new ChatModerationHandler(update);
+            else
+            {
+                SendAnswer(YummyChannel_CHAT, "Index", "Бот запущен в обычном режиме. Если были команды которые были не обработаны - повторите их.");
+            }
         }
+
+
+        // System.err.println(update.getMessage().getReplyToMessage().getPoll().getTotalVoterCount());
+        if (update.getMessage() != null)
+        {
+            if (update.getMessage().getChat().getId() > 0)
+            {
+
+               //  new SendMessageMethod()
+                // TODO USER
+            }
+            else
+            {
+                new ChatModerationHandler(update);
+            }
+        }
+        else if (update.getCallbackQuery() != null)
+        {
+            if (update.getCallbackQuery().getMessage() != null && update.getCallbackQuery().getMessage().getChat().getId() > 0)
+            {
+                // TODO USER
+            }
+            else
+            {
+                new ChatModerationHandler(update);
+            }
+        }
+        else if (update.getPoll() != null)
+        {
+            SendAnswer(YummyReChat, "", String.valueOf(update.getPoll()));
+        }
+        else if (update.getPollAnswer() != null)
+        {
+            SendAnswer(YummyReChat, "", String.valueOf(update.getPollAnswer()));
+        }
+        else if (update.getChatMember() != null)
+        {
+            System.currentTimeMillis();
+        }
+        else
+        {
+            System.currentTimeMillis();
+        }
+
     }
 
     public void SendAnswer(String ChatID, String userName, String text)

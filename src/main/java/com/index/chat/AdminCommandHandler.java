@@ -3,22 +3,8 @@ package com.index.chat;
 import com.index.IndexMain;
 import com.index.data.sql.ChatInfo;
 import com.index.data.sql.UserInfo;
-import com.index.enums.RestrictionType;
-import com.index.model.holders.Moderation;
 import com.index.model.holders.User;
-import com.index.model.stickers.addSticker;
-import com.index.model.stickers.clearSticker;
-import com.index.model.stickers.delSticker;
-import com.index.model.stickers.listSticker;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.stickers.Sticker;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class AdminCommandHandler
 {
@@ -64,24 +50,46 @@ public class AdminCommandHandler
     public AdminCommandHandler(Update update)
     {
         setVariables(update);
-        // CHAT
-        if (updateMessage.startsWith("//chat_info"))
+        String command = updateMessage.split(" ", 2)[0];
+        Commands requestCommand = Commands.getCommandByString(command);
+        if (requestCommand != null)
         {
-            sendMessage(ChatInfo.getInstance().getChat(updateChatID).getChatInfo(), "null", update.getMessage().getMessageId());
+            try
+            {
+                requestCommand.makeCommand(update);
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        }
+        /*
+        else if (updateMessage.startsWith("//user_get"))
+        {
+            String[] split = updateMessage.split(" ");
+            if (split.length == 1)
+            {
+                return;
+            }
+            sendMessage(UserInfo.getInstance().getUser(updateChatID, split[1]).getAllInfo(), "HTML", messageID);
         }
         else if (updateMessage.startsWith("//user_save"))
         {
             UserInfo.getInstance().storeChat(updateChatID);
+            sendMessage("Уведомление: попытка сохранить информацию о пользователях чата" + ";", "null", messageID);
         }
         else if (updateMessage.startsWith("//chat_moder_add"))
         {
+            if (replyUser == null) return;
             ChatInfo.getInstance().getChat(updateChatID).addToUserModeration(replyUser.getUserID());
             ChatInfo.getInstance().storeMe(updateChatID);
+            sendMessage("Уведомление: пользователь " + replyUser.getUserName() + " получил права " + (ChatInfo.getInstance().getChat(updateChatID).getUserModeration().contains(replyUser.getUserID()) ? "модератора " : "пользователя") + ";", "null", messageID);
         }
         else if (updateMessage.startsWith("//chat_moder_remove"))
         {
             ChatInfo.getInstance().getChat(updateChatID).removeUserModeration(replyUser.getUserID());
             ChatInfo.getInstance().storeMe(updateChatID);
+            sendMessage("Уведомление: пользователь " + replyUser.getUserName() + " получил права " + (ChatInfo.getInstance().getChat(updateChatID).getUserModeration().contains(replyUser.getUserID()) ? "модератора " : "пользователя") + ";", "null", messageID);
         }
         else if (updateMessage.startsWith("//chat_moder_list"))
         {
@@ -140,6 +148,11 @@ public class AdminCommandHandler
             }
             im.deleteMessage(updateChatID, requestMessageID);
         }
+        else if (updateMessage.startsWith("//mass_delete"))
+        {
+            String[] splits = updateMessage.split(" ");
+            new massDelete(updateChatID, splits[1], splits[2]);
+        }
         // STICKERS
         else if (updateMessage.startsWith("//add_s"))
         {
@@ -173,12 +186,12 @@ public class AdminCommandHandler
             if (replyUser == null)
             {
                 updateUser.setIgnoreStickerCheck(!updateUser.getIgnoreStickerCheck());
-                im.SendAnswer(updateChatID, "Index", "УВЕДОМЛЕНИЕ: Для пользователя " + updateUser.getUserName() + " теперь " + (!updateUser.getIgnoreStickerCheck() ? "не проверяются " : "проверяются ") + "отправленные стикеры;");
+                im.SendAnswer(updateChatID, "Index", "УВЕДОМЛЕНИЕ: Для пользователя " + updateUser.getUserName() + " теперь " + (updateUser.getIgnoreStickerCheck() ? "не проверяются " : "проверяются ") + "отправленные стикеры;");
             }
             else
             {
                 replyUser.setIgnoreStickerCheck(!replyUser.getIgnoreStickerCheck());
-                im.SendAnswer(updateChatID, "Index", "УВЕДОМЛЕНИЕ: Для пользователя " + replyUser.getUserName() + " теперь " + (!replyUser.getIgnoreStickerCheck() ? "не проверяются " : "проверяются ") + "отправленные стикеры;");
+                im.SendAnswer(updateChatID, "Index", "УВЕДОМЛЕНИЕ: Для пользователя " + replyUser.getUserName() + " теперь " + (replyUser.getIgnoreStickerCheck() ? "не проверяются " : "проверяются ") + "отправленные стикеры;");
             }
         }
         // MODERATION
@@ -220,6 +233,62 @@ public class AdminCommandHandler
         else if (updateMessage.startsWith("//stats"))
         {
         }
+        else if (updateMessage.startsWith("//umu"))
+        {
+            try {
+                Commands.ADMIN_PING.makeCommand(update);
+            } catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+
+
+            /*
+            GetChatAdministrators getChatAdministrators = new GetChatAdministrators(new IndexMain().YummyReChat);
+            try {
+                List<ChatMember> umu = new IndexMain().execute(getChatAdministrators);
+                sendMessage(umu.toString(), "null", 0);
+            } catch (TelegramApiException e) {
+                throw new RuntimeException(e);
+            }
+
+             */
+            /*
+            SendPoll sp = new SendPoll();
+            sp.setChatId(new IndexMain().YummyReChat);
+            sp.setOptions(List.of("umu", "umu", "umu"));
+            sp.setQuestion("How to be umu");
+            sp.setType("quiz");
+            sp.setCorrectOptionId(2);
+            sp.setIsAnonymous(false);
+            try {
+                new IndexMain().execute(sp);
+            } catch (TelegramApiException e) {
+                throw new RuntimeException(e);
+            }
+
+             */
+
+
+            /*
+            org.telegram.telegrambots.meta.api.objects.InputFile file = new org.telegram.telegrambots.meta.api.objects.InputFile();
+            file.setMedia("AgACAgIAAx0CVq806gABEOyQYq3xsiDyM2k_IQqS6KzaWFpKK70AAiu9MRsmqXFJmfhWomVecz4BAAMCAANtAAMkBA");
+            SendPhoto photo = new SendPhoto();
+            photo.setChatId(updateChatID);
+            photo.setPhoto(file);
+            photo.setCaption("НЕ ОБРАЩАТЬ ВНИМАНИЯ");
+            try {
+                im.execute(photo);
+            } catch (TelegramApiException e) {
+                throw new RuntimeException(e);
+            }
+            // sendMessage(update.getMessage().getAnimation().getFileId(), "null", 0);
+        }
+        else if (updateMessage.startsWith("//parse"))
+        {
+            ReportTicketsInfo.getInstance().load();
+        }
+        */
     }
 
     private void sendMessage(String message, String format, String replyOn)

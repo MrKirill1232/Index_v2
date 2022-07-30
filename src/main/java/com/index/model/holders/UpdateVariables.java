@@ -1,5 +1,6 @@
 package com.index.model.holders;
 
+import com.index.Params;
 import com.index.data.sql.ChatInfo;
 import com.index.data.sql.UserInfo;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -34,7 +35,18 @@ public class UpdateVariables
         ChatInfo chatsInfo = ChatInfo.getInstance();
         String chatID = String.valueOf(message.getChatId());
         updateChat = chatsInfo.getChat(chatID);
-        if (updateChat == null) /**/ if (!chatsInfo.addChat(update)) /**/ return;
+        if (updateChat == null)
+        {
+            if (!chatsInfo.addChat(update))
+            {
+                return;
+            }
+            updateChat = chatsInfo.getChat(chatID);
+            if (updateChat == null)
+            {
+                return;
+            }
+        }
         if (false) //!temp.getChat().getTitle().equals(updateChat.getChatName()))
         {
             updateChat.setChatName(message.getChat().getTitle());
@@ -53,8 +65,8 @@ public class UpdateVariables
          */
         if (message.getReplyToMessage() != null)
         {
-            String replyUserID = message.getSenderChat() == null ? String.valueOf(message.getFrom().getId()) : String.valueOf(message.getSenderChat().getId());
-            String replyUserName = message.getSenderChat() == null ? message.getFrom().getFirstName() : message.getSenderChat().getTitle();
+            String replyUserID = message.getReplyToMessage().getSenderChat() == null ? String.valueOf(message.getReplyToMessage().getFrom().getId()) : String.valueOf(message.getReplyToMessage().getSenderChat().getId());
+            String replyUserName = message.getReplyToMessage().getSenderChat() == null ? message.getReplyToMessage().getFrom().getFirstName() : message.getReplyToMessage().getSenderChat().getTitle();
             replyUser = usersInfo.getUser(chatID, replyUserID) == null ? usersInfo.addUser(update) : usersInfo.getUser(chatID, replyUserID);
             if (replyUser == null) /**/ return;
             /*
@@ -66,7 +78,14 @@ public class UpdateVariables
             }
              */
         }
-        currentRestrictionTime = updateUser.getRestrictionTime() != null ? updateUser.getRestrictionTime().getTimeInMillis() : 0L;
+        try
+        {
+            currentRestrictionTime = updateUser.getRestrictionTime() != null ? updateUser.getRestrictionTime().getTimeInMillis() : 0L;
+        }
+        catch (Exception ignored)
+        {
+            currentRestrictionTime = 0L;
+        }
         if (currentRestrictionTime < currentTime)
         {
             currentRestrictionTime = 0L;
@@ -83,11 +102,11 @@ public class UpdateVariables
         nextResetTime = calendar.getTimeInMillis();
         userModeration = updateChat.getUserModeration();
         ignoreUsers = updateChat.getAdminsList();
-        if (chatID.equals(String.valueOf("-1001604709313"))) // re chat
+        if (chatID.equals(Params.CHAT_YUMMY_CHAT_TECH)) // re chat
         {
             skip_check = true;
         }
-        updateTime = update.getMessage() == null ? (long) update.getCallbackQuery().getMessage().getDate() : (long) update.getMessage().getDate();
+        updateTime = update.getMessage() == null ? ((long) update.getCallbackQuery().getMessage().getDate()) * 1000L : ((long) update.getMessage().getDate()) * 1000L;
     }
 
     public Chat getUpdateChat()
@@ -103,6 +122,12 @@ public class UpdateVariables
     public User getReplyUser()
     {
         return replyUser;
+    }
+
+    public boolean tryToSetReplyUser(String chatID, String replyID)
+    {
+        replyUser = UserInfo.getInstance().getUser(chatID, replyID);
+        return replyUser != null;
     }
 
     public String getUpdateMessage()

@@ -184,7 +184,7 @@ public class User {
                         (getRestrictionTime().getTimeInMillis() > System.currentTimeMillis() ?
                                 "\tВремя снятия ограничений - " +
                                         (getRestrictionTime() != null ?
-                                                DATE_FORMAT.format(getRestrictionTime().getTime()) :
+                                                DATE_FORMAT.format(getRestrictionTime().getTime()) + " - " + getRestrictionTime().getTimeInMillis() :
                                                 "0") :
                                 "") + "\n") +
                 "\tВремя следующего сброса параметров ниже - " + (getNextMessageReset() != null ?  DATE_FORMAT.format(getNextMessageReset().getTime()) : "0") + "\n" +

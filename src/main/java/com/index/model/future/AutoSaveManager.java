@@ -8,7 +8,6 @@ import java.util.concurrent.*;
 
 public class AutoSaveManager
 {
-    public boolean sends = false;
     protected AutoSaveManager()
     {
         ScheduledExecutorService save = Executors.newScheduledThreadPool(1);

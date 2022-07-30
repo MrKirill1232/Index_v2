@@ -39,6 +39,10 @@ public class listSticker {
         else /**/ stickerName = "newList";
     }
 
+    public listSticker(Update update)
+    {
+        new listSticker(update, false);
+    }
     public listSticker(Update update, boolean isQuery)
     {
         this.isQuery = isQuery;

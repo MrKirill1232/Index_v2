@@ -1,8 +1,12 @@
 package com.index.chat;
 
 import com.index.IndexMain;
+import com.index.data.sql.ReportTicketsInfo;
 import com.index.enums.RestrictionType;
+import com.index.model.holders.Chat;
 import com.index.model.holders.Moderation;
+import com.index.model.holders.UpdateVariables;
+import com.index.model.holders.User;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
@@ -15,25 +19,42 @@ public class UserCommandsHandler {
     Moderation mod = new Moderation();
     String newmessage;
 
-    String chat_id;
+    Chat updateChat;
     String original_message;
-    String user_id;
-    String update_name;
+    User updateUser;
+    User replyUser;
 
     List<String> user_moderation = new ArrayList<>();
 
-    private void setVariables(Update update){
-        Message temp = update.getMessage();
-        original_message = temp.getText() != null ? temp.getText() : temp.getCaption() != null ? temp.getCaption() : null;
-        user_id = temp.getSenderChat() == null ? String.valueOf(temp.getFrom().getId()) : String.valueOf(temp.getSenderChat().getId());
-        update_name = temp.getSenderChat() == null ? temp.getFrom().getFirstName() : temp.getSenderChat().getTitle();
-        chat_id = String.valueOf(temp.getChatId());
+    private void setVariables(Update update)
+    {
+        UpdateVariables uv = new UpdateVariables(update);
+        if (uv.getMessage() == null)
+        {
+            return;
+        }
+        Message message = uv.getMessage();
+        original_message = uv.getUpdateMessage();
+        updateChat = uv.getUpdateChat();
+        updateUser = uv.getUpdateUser();
+        replyUser = message.getReplyToMessage() != null ? uv.getReplyUser() : null;
+        user_moderation.addAll(updateChat.getUserModeration());
+        user_moderation.addAll(updateChat.getAdminsList());
+
     }
 
     public UserCommandsHandler(Update update) {
         setVariables(update);
-        if (original_message.startsWith("/mute")){
-            mod.getAction(update, true, RestrictionType.MUTE);
+        if (user_moderation.contains(updateUser.getUserID()))
+        {
+            if (original_message.startsWith("/mute"))
+            {
+                mod.getAction(update, true, RestrictionType.MUTE);
+            }
+        }
+        if (original_message.startsWith("/report"))
+        {
+            ReportTicketsInfo.getInstance().addNewReport(update);
         }
     }
 }

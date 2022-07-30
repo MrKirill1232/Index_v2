@@ -5,7 +5,8 @@ public enum RestrictionMediaType {
     GIF,
     STICKER,
     VIDEO,
-    BOT;
+    BOT,
+    FORWARD;
 
     public static RestrictionMediaType getRestrictionMediaType(int id)
     {
